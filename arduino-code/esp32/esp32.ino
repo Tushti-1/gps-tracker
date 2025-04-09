@@ -10,12 +10,12 @@
 HardwareSerial a9g_gps(2);
 
 // WiFi credentials
-const char* ssid = "Tushti";
-const char* password = "Tushti1234";
+const char* ssid = "BAPI";
+const char* password = "BAPI0509";
 
 // Your local backend server address
-const char* server_url = "http://192.168.45.237:3000/gps";
-
+//const char* server_url = "http://192.168.45.237:3000/gps";
+const char* server_url = "https://gps-tracker-m2m7.onrender.com/gps";
 WiFiMulti wifimulti;
 
 // NTP setup for getting timestamp

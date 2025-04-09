@@ -13,16 +13,11 @@
             width: 100%;
         }
 
-        .controls {
+        #last-updated {
             text-align: center;
             margin: 10px;
-        }
-
-        .controls button {
-            padding: 10px 20px;
             font-size: 16px;
-            margin: 0 10px;
-            cursor: pointer;
+            font-weight: bold;
         }
 
         body {
@@ -33,12 +28,8 @@
 </head>
 <body>
 
-    <div class="controls">
-        <button onclick="startTracking()">Start Tracking</button>
-        <button onclick="stopTracking()">Stop Tracking</button>
-    </div>
-
     <div id="map"></div>
+    <div id="last-updated">Last updated: --</div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -54,11 +45,10 @@
         let marker;
         let pathCoordinates = [];
         let polyline = L.polyline(pathCoordinates, { color: 'blue' }).addTo(map);
-        let trackingInterval;
 
         async function fetchGPSData() {
             try {
-                const response = await fetch('http://localhost:3000/gps/latest');
+                const response = await fetch('https://gps-tracker-m2m7.onrender.com/gps/latest');
                 const data = await response.json();
 
                 if (!data || !data.latitude || !data.longitude) {
@@ -68,6 +58,7 @@
 
                 const lat = data.latitude;
                 const lon = data.longitude;
+                const timestamp = data.timestamp;
 
                 if (!marker) {
                     marker = L.marker([lat, lon]).addTo(map);
@@ -79,25 +70,18 @@
 
                 pathCoordinates.push([lat, lon]);
                 polyline.setLatLngs(pathCoordinates);
+
+                // Update timestamp
+                const lastUpdatedElement = document.getElementById("last-updated");
+                const formattedTime = new Date(timestamp).toLocaleString();
+                lastUpdatedElement.textContent = `Last updated: ${formattedTime}`;
             } catch (err) {
                 console.error("Error fetching GPS data:", err);
             }
         }
 
-        function startTracking() {
-            if (!trackingInterval) {
-                trackingInterval = setInterval(fetchGPSData, 5000);
-                console.log("Tracking started");
-            }
-        }
-
-        function stopTracking() {
-            if (trackingInterval) {
-                clearInterval(trackingInterval);
-                trackingInterval = null;
-                console.log("Tracking stopped");
-            }
-        }
+        setInterval(fetchGPSData, 5000); // Fetch every 5 seconds
+        fetchGPSData(); // Initial fetch
     </script>
 </body>
 </html>
