@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live GPS Tracker</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 90vh;
+            width: 100%;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 10px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button onclick="startTracking()">Start Tracking</button>
+        <button onclick="stopTracking()">Stop Tracking</button>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let map = L.map('map').setView([22.9526, 88.3752], 18);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 22,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let marker;
+        let pathCoordinates = [];
+        let polyline = L.polyline(pathCoordinates, { color: 'blue' }).addTo(map);
+        let trackingInterval;
+
+        async function fetchGPSData() {
+            try {
+                const response = await fetch('http://localhost:3000/gps/latest');
+                const data = await response.json();
+
+                if (!data || !data.latitude || !data.longitude) {
+                    console.log("No GPS data received");
+                    return;
+                }
+
+                const lat = data.latitude;
+                const lon = data.longitude;
+
+                if (!marker) {
+                    marker = L.marker([lat, lon]).addTo(map);
+                } else {
+                    marker.setLatLng([lat, lon]);
+                }
+
+                map.setView([lat, lon], 18);
+
+                pathCoordinates.push([lat, lon]);
+                polyline.setLatLngs(pathCoordinates);
+            } catch (err) {
+                console.error("Error fetching GPS data:", err);
+            }
+        }
+
+        function startTracking() {
+            if (!trackingInterval) {
+                trackingInterval = setInterval(fetchGPSData, 5000);
+                console.log("Tracking started");
+            }
+        }
+
+        function stopTracking() {
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+                trackingInterval = null;
+                console.log("Tracking stopped");
+            }
+        }
+    </script>
+</body>
+</html>
