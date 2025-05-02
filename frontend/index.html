@@ -1,87 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Live GPS Tracker</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        #map {
-            height: 90vh;
-            width: 100%;
-        }
-
-        #last-updated {
-            text-align: center;
-            margin: 10px;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
-    </style>
+  <title>Live Car Tracker</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>#map { height: 90vh; }</style>
 </head>
 <body>
+  <h2 style="text-align:center;">Two-Car Live GPS Tracker</h2>
+  <div id="map"></div>
 
-    <div id="map"></div>
-    <div id="last-updated">Last updated: --</div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([22.57, 88.36], 18);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    let markers = {};
+    let colors = { car1: 'blue', car2: 'red' };
+    let polylines = { car1: [], car2: [] };
 
-    <script>
-        let map = L.map('map').setView([22.9526, 88.3752], 18);
+    async function updateMap() {
+      const res = await fetch("https://gps-tracker-m2m7.onrender.com/gps/all-latest");
+      const data = await res.json();
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 22,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+      ['car1', 'car2'].forEach(car => {
+        const carData = data[car];
+        if (!carData) return;
 
-        let marker;
-        let pathCoordinates = [];
-        let polyline = L.polyline(pathCoordinates, { color: 'blue' }).addTo(map);
+        const { latitude, longitude } = carData;
 
-        async function fetchGPSData() {
-            try {
-                const response = await fetch('https://gps-tracker-m2m7.onrender.com/gps/latest');
-                const data = await response.json();
-
-                if (!data || !data.latitude || !data.longitude) {
-                    console.log("No GPS data received");
-                    return;
-                }
-
-                const lat = data.latitude;
-                const lon = data.longitude;
-                const timestamp = data.timestamp;
-
-                if (!marker) {
-                    marker = L.marker([lat, lon]).addTo(map);
-                } else {
-                    marker.setLatLng([lat, lon]);
-                }
-
-                map.setView([lat, lon], 18);
-
-                pathCoordinates.push([lat, lon]);
-                polyline.setLatLngs(pathCoordinates);
-
-                // Update timestamp
-                const lastUpdatedElement = document.getElementById("last-updated");
-                const formattedTime = new Date(timestamp).toLocaleString();
-                lastUpdatedElement.textContent = `Last updated: ${formattedTime}`;
-            } catch (err) {
-                console.error("Error fetching GPS data:", err);
-            }
+        if (!markers[car]) {
+          markers[car] = L.marker([latitude, longitude], {
+            icon: L.divIcon({ className: 'custom-icon', html: `<b style="color:${colors[car]}">${car}</b>` })
+          }).addTo(map);
+        } else {
+          markers[car].setLatLng([latitude, longitude]);
         }
 
-        setInterval(fetchGPSData, 5000); // Fetch every 5 seconds
-        fetchGPSData(); // Initial fetch
-    </script>
+        polylines[car].push([latitude, longitude]);
+        const path = L.polyline(polylines[car], { color: colors[car] }).addTo(map);
+      });
+    }
+
+    setInterval(updateMap, 5000);
+    updateMap();
+  </script>
 </body>
 </html>
