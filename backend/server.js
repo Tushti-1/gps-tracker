@@ -86,41 +86,23 @@ app.post('/gps', async (req, res) => {
   }
 });
 
-// Get latest data for a specific car
-app.get('/gps/:carId', async (req, res) => {
-  const { carId } = req.params;
-  const latest = await GPS.findOne({ carId }).sort({ _id: -1 });
-  res.json(latest);
-});
-
-// ✅ NEW: Get latest location of both cars
+// Get latest data for all cars
 app.get('/gps/all-latest', async (req, res) => {
   try {
-    const latestData = await GPS.aggregate([
-      { $sort: { timestamp: -1 } },  // Ensure latest by timestamp
-      {
-        $group: {
-          _id: "$carId",
-          latitude: { $first: "$latitude" },
-          longitude: { $first: "$longitude" },
-          timestamp: { $first: "$timestamp" }
-        }
-      }
-    ]);
+    const car1Data = await GPS.findOne({ carId: 'car1' }).sort({ _id: -1 });
+    const car2Data = await GPS.findOne({ carId: 'car2' }).sort({ _id: -1 });
 
-    const response = {};
-    latestData.forEach(entry => {
-      response[entry._id] = {
-        latitude: entry.latitude,
-        longitude: entry.longitude,
-        timestamp: entry.timestamp
-      };
+    console.log('Car 1 Data:', car1Data);  // Debug log
+    console.log('Car 2 Data:', car2Data);  // Debug log
+
+    // Return available car data, even if only one car's data exists
+    res.json({
+      car1: car1Data || null,
+      car2: car2Data || null
     });
-
-    res.json(response);
-  } catch (error) {
-    console.error('Error in /gps/all-latest:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    res.status(500).json({ error: 'Error fetching data' });
   }
 });
 
@@ -173,3 +155,4 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
