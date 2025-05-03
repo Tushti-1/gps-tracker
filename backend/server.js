@@ -44,7 +44,7 @@
 // const PORT = 3000;
 // app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 //----------------------------------------------------------------------------------------------------------
-require('dotenv').config();
+rrequire('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -91,6 +91,37 @@ app.get('/gps/:carId', async (req, res) => {
   const { carId } = req.params;
   const latest = await GPS.findOne({ carId }).sort({ _id: -1 });
   res.json(latest);
+});
+
+// ✅ NEW: Get latest location of both cars
+app.get('/gps/all-latest', async (req, res) => {
+  try {
+    const latestData = await GPS.aggregate([
+      { $sort: { timestamp: -1 } },  // Ensure latest by timestamp
+      {
+        $group: {
+          _id: "$carId",
+          latitude: { $first: "$latitude" },
+          longitude: { $first: "$longitude" },
+          timestamp: { $first: "$timestamp" }
+        }
+      }
+    ]);
+
+    const response = {};
+    latestData.forEach(entry => {
+      response[entry._id] = {
+        latitude: entry.latitude,
+        longitude: entry.longitude,
+        timestamp: entry.timestamp
+      };
+    });
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error in /gps/all-latest:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Compare distance between cars and return action

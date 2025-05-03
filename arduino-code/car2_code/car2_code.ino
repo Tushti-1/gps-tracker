@@ -7,8 +7,8 @@
 #include <time.h>
 
 // Wi-Fi credentials
-const char* ssid = "Tushti";
-const char* password = "Tushti1234";
+const char* ssid = "Mrsdg";
+const char* password = "dg123456";
 
 // Server URL
 const char* server_url = "https://gps-tracker-m2m7.onrender.com/gps";
