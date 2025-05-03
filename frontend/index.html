@@ -4,7 +4,13 @@
   <title>Live Car Tracker</title>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>#map { height: 90vh; }</style>
+  <style>
+    #map { height: 90vh; }
+    .custom-icon {
+      font-weight: bold;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <h2 style="text-align:center;">Two-Car Live GPS Tracker</h2>
@@ -20,32 +26,50 @@
     let markers = {};
     let colors = { car1: 'blue', car2: 'red' };
     let polylines = { car1: [], car2: [] };
+    let paths = {};  // Store polyline layers to update them without overlap
 
     async function updateMap() {
-      const res = await fetch("https://gps-tracker-m2m7.onrender.com/gps/all-latest");
-      const data = await res.json();
+      try {
+        const res = await fetch("https://gps-tracker-m2m7.onrender.com/gps/all-latest");
+        const data = await res.json();
 
-      ['car1', 'car2'].forEach(car => {
-        const carData = data[car];
-        if (!carData) return;
+        const bounds = [];
 
-        const { latitude, longitude } = carData;
+        ['car1', 'car2'].forEach(car => {
+          const carData = data[car];
+          if (!carData) return;
 
-        if (!markers[car]) {
-          markers[car] = L.marker([latitude, longitude], {
-            icon: L.divIcon({ className: 'custom-icon', html: `<b style="color:${colors[car]}">${car}</b>` })
-          }).addTo(map);
-        } else {
-          markers[car].setLatLng([latitude, longitude]);
+          const { latitude, longitude } = carData;
+          const latlng = [latitude, longitude];
+          bounds.push(latlng);
+
+          // Marker handling
+          if (!markers[car]) {
+            markers[car] = L.marker(latlng, {
+              icon: L.divIcon({ className: 'custom-icon', html: `<b style="color:${colors[car]}">${car}</b>` })
+            }).addTo(map);
+          } else {
+            markers[car].setLatLng(latlng);
+          }
+
+          // Path handling
+          polylines[car].push(latlng);
+          if (paths[car]) {
+            map.removeLayer(paths[car]);  // Remove old path
+          }
+          paths[car] = L.polyline(polylines[car], { color: colors[car] }).addTo(map);
+        });
+
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [30, 30] });
         }
-
-        polylines[car].push([latitude, longitude]);
-        const path = L.polyline(polylines[car], { color: colors[car] }).addTo(map);
-      });
+      } catch (err) {
+        console.error("Error updating map:", err);
+      }
     }
 
-    setInterval(updateMap, 5000);
     updateMap();
+    setInterval(updateMap, 5000);
   </script>
 </body>
 </html>
